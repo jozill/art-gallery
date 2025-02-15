@@ -1,21 +1,29 @@
 const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const dotenv = require('dotenv');
 const app = express();
 
-// Configure Cloudinary - Replace with your credentials
+// Load environment variables
+dotenv.config();
+
+// Configure Cloudinary
 cloudinary.config({
-  cloud_name: 'YOUR_CLOUD_NAME',
-  api_key: 'YOUR_API_KEY',
-  api_secret: 'YOUR_API_SECRET'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configure Multer for file upload
+// Configure Multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Rest of your existing setup code...
+// Store data (in real apps, use a database)
 let artworks = [];
-let analytics = { totalViews: 0, viewsByArtwork: {} };
+let analytics = {
+  totalViews: 0,
+  viewsByArtwork: {}
+};
+
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'password123';
 let isLoggedIn = false;
@@ -23,12 +31,12 @@ let isLoggedIn = false;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Your existing homepage route...
+// Homepage with gallery (same as before)
 app.get('/', (req, res) => {
   // ... existing homepage code ...
 });
 
-// Update admin panel to include file upload
+// Admin panel with file upload
 app.get('/admin', (req, res) => {
   if (!isLoggedIn) {
     // ... existing login form code ...
@@ -77,15 +85,14 @@ app.get('/admin', (req, res) => {
         margin: 10px 0;
         border-radius: 5px;
       }
-      .upload-preview {
+      #preview {
         max-width: 200px;
-        margin: 10px 0;
         display: none;
+        margin: 10px 0;
       }
       .loading {
         display: none;
         color: #666;
-        font-style: italic;
       }
     </style>
 
@@ -96,7 +103,7 @@ app.get('/admin', (req, res) => {
         <input type="text" name="title" placeholder="Artwork Title" required>
         <textarea name="description" placeholder="Description" required></textarea>
         <input type="file" name="image" accept="image/*" required onchange="previewImage(this)">
-        <img id="preview" class="upload-preview">
+        <img id="preview">
         <div id="loading" class="loading">Uploading image...</div>
         <button type="submit" onclick="showLoading()">Add Artwork</button>
       </form>
@@ -175,21 +182,40 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     artworks.push(newArtwork);
     res.redirect('/admin');
   } catch (error) {
-    res.send(`Error uploading: ${error.message}`);
+    console.error('Upload error:', error);
+    res.send(`
+      <p>Error uploading: ${error.message}</p>
+      <a href="/admin">Back to Admin Panel</a>
+    `);
   }
 });
 
-// Your existing routes (login, logout, delete)...
+// Existing routes (login, logout, delete)
 app.post('/login', (req, res) => {
-  // ... existing login code ...
+  if (req.body.username === ADMIN_USERNAME && req.body.password === ADMIN_PASSWORD) {
+    isLoggedIn = true;
+    res.redirect('/admin');
+  } else {
+    res.send(`
+      <p>Invalid credentials</p>
+      <a href="/admin">Try again</a>
+    `);
+  }
 });
 
 app.post('/logout', (req, res) => {
-  // ... existing logout code ...
+  isLoggedIn = false;
+  res.redirect('/admin');
 });
 
 app.post('/delete-artwork', (req, res) => {
-  // ... existing delete code ...
+  if (!isLoggedIn) {
+    res.redirect('/admin');
+    return;
+  }
+
+  artworks = artworks.filter(art => art.id !== req.body.id);
+  res.redirect('/admin');
 });
 
 app.listen(3000, () => {
