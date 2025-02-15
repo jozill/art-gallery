@@ -20,8 +20,8 @@ const upload = multer({ storage: storage });
 
 // Store data
 let artworks = [];
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'password123';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'Jozilla13';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Jozilla911!';
 let isLoggedIn = false;
 
 app.use(express.json());
